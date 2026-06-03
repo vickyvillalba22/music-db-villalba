@@ -2,6 +2,7 @@ import ProductDashboardContainer from "@/containers/ProductDashboardContainer";
 
 export const dynamic = "force-dynamic";
 
+//PONERLO EN UN ARCHIVO APARTE
 const endpoints = [
   "GET /api/products",
   "POST /api/products",
