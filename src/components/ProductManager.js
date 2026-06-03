@@ -13,6 +13,7 @@ import {
   updateProduct,
 } from "@/app/actions/products";
 
+//para el estado inicial del form
 const initialForm = {
   name: "",
   description: "",
@@ -22,40 +23,61 @@ const initialForm = {
 };
 
 export default function ProductManager({ initialProducts = [] }) {
+
+  //navegación
   const router = useRouter();
+  //estado del forms
   const [form, setForm] = useState(initialForm);
+  //para que react sepa qué producto estamos editando
   const [editingId, setEditingId] = useState("");
+  //mostrar mensajes
   const [message, setMessage] = useState("");
+  //si está en proceso de guardado, por ejemplo para deshabilitar botones
   const [isSaving, setIsSaving] = useState(false);
+  //estado para actualización de la página
   const [isRefreshing, startRefreshTransition] = useTransition();
 
+  //useCallback: evita que se cree la función en cada render y usa la que se creo antes
+  //resetea el estado del forms y sale del modo edición, sacandole el valor al id
   const resetForm = useCallback(() => {
     setForm(initialForm);
     setEditingId("");
   }, []);
 
+  //volver a cargar los datos de la página. ejecuta los server components de nuevo y trae los datos nuevos
   const refreshProducts = useCallback(() => {
     startRefreshTransition(() => {
       router.refresh();
     });
   }, [router]);
 
+
+  //va armando el nuevo estado de form con un spread y prop dinámica
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
   }
 
+
   async function handleSubmit(event) {
+
+    //evita que el forms recargue la página
     event.preventDefault();
+    //activa el estado de guardado
     setIsSaving(true);
 
+    //convierte el formulario en objeto
     const formData = new FormData(event.currentTarget);
+
+    //a partir del estdo de edicion, si tiene id pasa la función de actualizar, sino, la de crear
+    //bind: hace que el primer parámetro (id osea editing id) ya quede guardado y solo pongamos los dos siguientes
     const action = editingId ? updateProduct.bind(null, editingId) : createProduct;
 
     try {
       const result = await action(null, formData);
       setMessage(result.message);
 
+      //si se resuelve resetea y refresca los productos
       if (result.ok) {
         resetForm();
         refreshProducts();
@@ -63,12 +85,15 @@ export default function ProductManager({ initialProducts = [] }) {
     } catch {
       setMessage("Ocurrio un error al guardar el producto.");
     } finally {
+      //siempre termina el proceso de guardado
       setIsSaving(false);
     }
   }
 
   function handleEdit(product) {
+    //guarda el id del producto
     setEditingId(product._id);
+    //hace que los inputs se completen, carga los datos en el forms próximos a editar
     setForm({
       name: product.name,
       description: product.description,
@@ -80,18 +105,24 @@ export default function ProductManager({ initialProducts = [] }) {
   }
 
   async function handleDelete(id) {
+
+    //llama a la server action
     const result = await deleteProduct(id);
 
+    //si hay caso de error:
     if (!result.ok) {
       setMessage(result.message || "No se pudo eliminar el producto.");
       return;
     }
 
+    //caso especial: si es igual a uno que estoy editando se recarga el form
     if (editingId === id) {
       resetForm();
     }
 
+    //le da el valor al message
     setMessage(result.message);
+    //refresca los productos
     refreshProducts();
   }
 
